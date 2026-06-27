@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=240,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Soccerway R1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a1a0e;--surf:#0f2417;--surf2:#143020;--offset:#1a3a28;
+  --div:#1f4631;--bord:#2a5d40;
+  --txt:#e8ebe9;--muted:#7a9a82;--faint:#4a6a52;
+  --green:#22c55e;--green-bright:#34d65f;--yellow:#fbbf24;--red:#ef4444;--blue:#3b82f6;
+  --mono:'JetBrains Mono',monospace;--body:'Inter',sans-serif;
+  --xs:0.5625rem;--sm:0.625rem;--base:0.6875rem;--md:0.8125rem;--lg:0.9375rem;
+  --r:0.375rem;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{height:100%;-webkit-text-size-adjust:none}
+body{font-family:var(--body);font-size:var(--base);color:var(--txt);background:var(--bg);
+  height:100dvh;overflow:hidden;display:flex;flex-direction:column;max-width:240px;margin:0 auto}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;
+  background:var(--surf);border-bottom:1px solid var(--div);flex-shrink:0;height:24px}
+.header-title{font-family:var(--mono);font-size:var(--sm);font-weight:700;letter-spacing:.02em;display:flex;align-items:center;gap:4px}
+.header-title .ball{width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff 25%,#000 28% 35%,#fff 38%);border:1px solid #000;flex-shrink:0}
+.header-title .name{color:var(--green-bright)}
+.header-loading{width:8px;height:8px;border-radius:50%;background:var(--yellow);opacity:0;transition:opacity .2s}
+.header-loading.on{opacity:1;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Tabs */
+.tabs{display:flex;background:var(--surf);border-bottom:1px solid var(--div);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:4px 6px;font-family:var(--mono);font-size:var(--xs);font-weight:700;
+  color:var(--faint);text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid transparent;
+  cursor:pointer;white-space:nowrap;min-height:22px;display:flex;align-items:center;justify-content:center}
+.tab.active{color:var(--green-bright);border-bottom-color:var(--green-bright)}
+.tab.focused{background:var(--offset)}
+
+/* Iframe area */
+.frame-wrap{flex:1;min-height:0;position:relative;overflow:hidden;background:#fff}
+.frame-scaled{position:absolute;top:0;left:0;width:300px;height:100%;border:0;
+  transform:scale(0.8);transform-origin:top left;background:#fff}
+.frame-scaled.zoom-1{transform:scale(1);width:240px}
+.frame-scaled.zoom-2{transform:scale(0.667);width:360px}
+.frame-scaled.zoom-3{transform:scale(0.6);width:400px}
+
+/* Loading overlay */
+.loading{position:absolute;top:0;left:0;right:0;bottom:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  z-index:10;transition:opacity .3s;pointer-events:none}
+.loading.hide{opacity:0;visibility:hidden}
+.loading-ball{width:24px;height:24px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,#fff 25%,#000 28% 35%,#fff 38%);
+  border:1.5px solid #000;animation:spin 1.2s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.loading-text{font-family:var(--mono);font-size:var(--xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+/* Help overlay */
+.help{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(10,26,14,0.95);
+  display:none;flex-direction:column;padding:14px 10px;z-index:20;color:var(--txt);overflow-y:auto}
+.help.open{display:flex}
+.help h3{font-family:var(--mono);font-size:var(--sm);color:var(--green-bright);margin-bottom:6px;letter-spacing:.06em}
+.help-row{display:flex;gap:8px;padding:3px 0;font-size:var(--xs);align-items:flex-start}
+.help-key{font-family:var(--mono);font-weight:700;color:var(--yellow);min-width:60px;flex-shrink:0}
+.help-desc{color:var(--muted);line-height:1.4}
+.help-close{position:absolute;top:6px;right:6px;font-family:var(--mono);font-size:var(--xs);
+  color:var(--muted);padding:2px 6px;background:var(--surf);border-radius:3px}
+
+/* Footer */
+.footer{display:flex;align-items:center;justify-content:space-between;padding:2px 8px;
+  background:var(--surf);border-top:1px solid var(--div);flex-shrink:0;min-height:18px;font-family:var(--mono);font-size:7px}
+.footer-left{color:var(--faint)}
+.footer-mid{flex:1;text-align:center;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.footer-right{color:var(--green-bright)}
+.footer-right .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green-bright);margin-right:3px}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-title">
+    <div class="ball"></div>
+    <span class="name">SOCCERWAY</span>
+  </div>
+  <div class="header-loading" id="loading"></div>
+</header>
+
+<nav class="tabs" id="tabs"></nav>
+
+<div class="frame-wrap" id="frameWrap">
+  <div class="loading" id="loadOverlay">
+    <div class="loading-ball"></div>
+    <div class="loading-text">Loading...</div>
+  </div>
+  <iframe class="frame-scaled" id="frame" src="about:blank"
+    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+    referrerpolicy="no-referrer-when-downgrade"
+    loading="eager"></iframe>
+
+  <!-- Help overlay -->
+  <div class="help" id="help">
+    <div class="help-close" id="helpClose">CLOSE</div>
+    <h3>R1 CONTROLS</h3>
+    <div class="help-row"><span class="help-key">SCROLL</span><span class="help-desc">Cycle tabs / scroll iframe</span></div>
+    <div class="help-row"><span class="help-key">PTT</span><span class="help-desc">Switch scroll mode (Tab ↔ Page)</span></div>
+    <div class="help-row"><span class="help-key">LONG PRESS</span><span class="help-desc">Open this help / cycle zoom</span></div>
+    <div class="help-row"><span class="help-key">TAP</span><span class="help-desc">Use the page (links, buttons)</span></div>
+    <div class="help-row"><span class="help-key">TAP TAB</span><span class="help-desc">Jump to section</span></div>
+    <h3 style="margin-top:8px">TIP</h3>
+    <div class="help-desc" style="font-size:var(--xs)">
+      Use touch to scroll inside the page. PTT toggles whether the scroll wheel cycles tabs or scrolls the page.
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <span class="footer-left">v1.0</span>
+  <span class="footer-mid" id="modeLabel">TAB MODE</span>
+  <span class="footer-right"><span class="dot"></span>LIVE</span>
+</footer>
+
+<script>
+/* ══════════════════════════════════════
+   SOCCERWAY R1 — WRAPPER
+   ══════════════════════════════════════ */
+
+const TABS = [
+  { label: 'LIVE',    url: 'https://us.soccerway.com/' },
+  { label: 'MATCHES', url: 'https://us.soccerway.com/matches/' },
+  { label: 'LEAGUES', url: 'https://us.soccerway.com/competitions/' },
+  { label: 'NEWS',    url: 'https://us.soccerway.com/news/' },
+  { label: 'TEAMS',   url: 'https://us.soccerway.com/teams/' },
+  { label: 'PLAYERS', url: 'https://us.soccerway.com/players/' }
+];
+
+let S = {
+  tabIdx: 0,
+  scrollMode: 'tab', // 'tab' or 'page'
+  zoomLevel: 0,      // 0 = default (0.8), 1 = 1.0, 2 = 0.667, 3 = 0.6
+  loading: true
+};
+
+const $ = id => document.getElementById(id);
+
+function renderTabs() {
+  const tabsEl = $('tabs');
+  tabsEl.innerHTML = TABS.map((t, i) => `
+    <div class="tab${i === S.tabIdx ? ' active' : ''}" data-i="${i}">${t.label}</div>
+  `).join('');
+  // Auto-scroll active tab into view
+  setTimeout(() => {
+    const active = tabsEl.querySelector('.tab.active');
+    if (active) active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'auto' });
+  }, 0);
+  // Click handlers
+  tabsEl.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => loadTab(parseInt(tab.dataset.i)));
+  });
+}
+
+function loadTab(idx) {
+  if (idx < 0 || idx >= TABS.length) return;
+  S.tabIdx = idx;
+  S.loading = true;
+  $('loadOverlay').classList.remove('hide');
+  $('loading').classList.add('on');
+  $('frame').src = TABS[idx].url;
+  renderTabs();
+  updateModeLabel();
+}
+
+function updateModeLabel() {
+  const label = `${TABS[S.tabIdx].label} · ${S.scrollMode === 'tab' ? 'TAB MODE' : 'PAGE MODE'}`;
+  $('modeLabel').textContent = label;
+}
+
+function setZoom(level) {
+  S.zoomLevel = level % 4;
+  const frame = $('frame');
+  frame.className = 'frame-scaled' + (S.zoomLevel === 0 ? '' : ' zoom-' + S.zoomLevel);
+}
+
+/* ── Iframe events ── */
+$('frame').addEventListener('load', () => {
+  S.loading = false;
+  setTimeout(() => {
+    $('loadOverlay').classList.add('hide');
+    $('loading').classList.remove('on');
+  }, 200);
+});
+
+/* ══════════════════════════════════════
+   R1 HARDWARE EVENTS
+   ══════════════════════════════════════ */
+
+function scrollWheel(dir) {
+  if (S.scrollMode === 'tab') {
+    // Cycle through tabs
+    const d = dir === 'up' ? -1 : 1;
+    let next = S.tabIdx + d;
+    if (next < 0) next = TABS.length - 1;
+    if (next >= TABS.length) next = 0;
+    loadTab(next);
+  } else {
+    // Page scroll mode: scroll the iframe (best-effort)
+    const frame = $('frame');
+    const amount = dir === 'up' ? -80 : 80;
+    try {
+      if (frame.contentWindow) {
+        frame.contentWindow.scrollBy({ top: amount, behavior: 'auto' });
+      }
+    } catch(e) {
+      // Cross-origin: send postMessage as fallback (won't be received by soccerway,
+      // but no harm). User can still touch-scroll inside the iframe.
+    }
+  }
+}
+
+function pttClick() {
+  // Toggle between TAB and PAGE scroll mode
+  S.scrollMode = S.scrollMode === 'tab' ? 'page' : 'tab';
+  updateModeLabel();
+
+  // Visual flash on mode label
+  const ml = $('modeLabel');
+  ml.style.color = 'var(--green-bright)';
+  setTimeout(() => { ml.style.color = ''; }, 400);
+}
+
+function longPress() {
+  // Cycle zoom level
+  setZoom(S.zoomLevel + 1);
+  const ml = $('modeLabel');
+  const zoomNames = ['DEFAULT', 'ACTUAL', 'WIDE', 'EXTRA WIDE'];
+  ml.textContent = 'ZOOM: ' + zoomNames[S.zoomLevel];
+  setTimeout(updateModeLabel, 1500);
+}
+
+/* ── Hardware listeners ── */
+window.addEventListener('scrollUp', () => scrollWheel('up'));
+window.addEventListener('scrollDown', () => scrollWheel('down'));
+window.addEventListener('sideClick', () => pttClick());
+window.addEventListener('longPressStart', () => longPress());
+
+/* ── Help overlay toggle (double tap header) ── */
+let lastHeaderTap = 0;
+document.querySelector('.header').addEventListener('click', () => {
+  const now = Date.now();
+  if (now - lastHeaderTap < 400) {
+    $('help').classList.toggle('open');
+  }
+  lastHeaderTap = now;
+});
+$('helpClose').addEventListener('click', () => $('help').classList.remove('open'));
+
+/* ── Keyboard fallbacks ── */
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'IFRAME') return;
+  if (e.key === 'ArrowUp')        { scrollWheel('up'); e.preventDefault(); }
+  else if (e.key === 'ArrowDown') { scrollWheel('down'); e.preventDefault(); }
+  else if (e.key === 'Enter' || e.key === ' ') { pttClick(); e.preventDefault(); }
+  else if (e.key === 'Escape' || e.key === 'Backspace') { longPress(); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft')  { loadTab((S.tabIdx - 1 + TABS.length) % TABS.length); e.preventDefault(); }
+  else if (e.key === 'ArrowRight') { loadTab((S.tabIdx + 1) % TABS.length); e.preventDefault(); }
+  else if (e.key === '?')          { $('help').classList.toggle('open'); }
+});
+
+/* ── Init ── */
+renderTabs();
+loadTab(0);
+updateModeLabel();
+</script>
+</body>
+</html>
