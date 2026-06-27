@@ -6,8 +6,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="3.2.0">
-<title>Soccerway R1 v3.2.0</title>
+<meta name="version" content="3.3.0">
+<title>Soccerway R1 v3.3.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -316,7 +316,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 </div>
 
 <footer class="footer">
-  <span class="footer-left" id="footerLeft">v3.2.0</span>
+  <span class="footer-left" id="footerLeft">v3.3.0</span>
   <span class="footer-mid" id="footerMid">Loading…</span>
   <span class="footer-right"><span id="countdown">30s</span></span>
 </footer>
@@ -386,7 +386,12 @@ let S = {
   countdownTimer: null,
   refreshing: false,
   compStandings: null,
-  detailScrollIdx: 0  // index into DETAIL_SECTIONS for section-by-section scroll
+  detailScrollIdx: 0,
+  // Live match detail auto-refresh
+  matchDetailTimer: null,   // setInterval id for stats/events/score refresh (30s)
+  matchClockTimer: null,    // setInterval id for clock ticker (1s)
+  matchLastFetch: 0,        // timestamp when we last fetched detail
+  matchInterpClock: ''      // locally-interpolated clock string for live
 };
 
 const $ = id => document.getElementById(id);
@@ -645,7 +650,7 @@ function groupedMatchList(list, includeCompHeader = true) {
 function render() {
   renderTabs();
   updateFooter();
-  $('footerLeft').textContent = 'v3.2.0';
+  $('footerLeft').textContent = 'v3.3.0';
 
   if (S.loading && S.matches.length === 0) {
     hideSubTabs();
@@ -702,7 +707,95 @@ async function openMatchDetail(match) {
   resetDetailScroll();
   render();
   S.matchDetail = await fetchMatchDetail(match);
+  S.matchLastFetch = Date.now();
   if (S.view === 'matchDetail') render();
+  // Start live auto-refresh if match is in progress
+  startMatchDetailRefresh();
+}
+
+function stopMatchDetailRefresh() {
+  if (S.matchDetailTimer) { clearInterval(S.matchDetailTimer); S.matchDetailTimer = null; }
+  if (S.matchClockTimer)  { clearInterval(S.matchClockTimer);  S.matchClockTimer = null; }
+  S.matchInterpClock = '';
+}
+
+function startMatchDetailRefresh() {
+  stopMatchDetailRefresh();
+  const m = S.selectedMatch;
+  if (!m || m.status !== 'in') return;
+
+  // 30s: re-fetch stats/events/score/clock from ESPN
+  S.matchDetailTimer = setInterval(async () => {
+    if (S.view !== 'matchDetail' || S.selectedMatch?.id !== m.id) {
+      stopMatchDetailRefresh(); return;
+    }
+    const fresh = await fetchMatchDetail(m);
+    if (!fresh || S.view !== 'matchDetail') return;
+    S.matchDetail = fresh;
+    S.matchLastFetch = Date.now();
+    // Also update selectedMatch core fields (score, clock, status) from header
+    updateSelectedMatchFromDetail(fresh);
+    // Re-render while preserving scroll position
+    const main = $('main');
+    const sTop = main ? main.scrollTop : 0;
+    render();
+    if (main) main.scrollTop = sTop;
+  }, 30000);
+
+  // 1s: tick the displayed clock between fetches
+  S.matchClockTimer = setInterval(() => {
+    if (S.view !== 'matchDetail' || S.selectedMatch?.id !== m.id) {
+      stopMatchDetailRefresh(); return;
+    }
+    updateLiveClock();
+  }, 1000);
+}
+
+function updateSelectedMatchFromDetail(detail) {
+  const sm = S.selectedMatch;
+  if (!sm || !detail) return;
+  const hdr = detail.header || {};
+  const comp = (hdr.competitions || [{}])[0];
+  const status = comp.status?.type || {};
+  const competitors = comp.competitors || [];
+  if (competitors.length >= 2) {
+    const home = competitors.find(t => t.homeAway === 'home') || competitors[0];
+    const away = competitors.find(t => t.homeAway === 'away') || competitors[1];
+    sm.home.score = home.score || sm.home.score;
+    sm.away.score = away.score || sm.away.score;
+  }
+  sm.status = status.state || sm.status;
+  sm.statusDetail = status.shortDetail || sm.statusDetail;
+  sm.statusDesc = status.description || sm.statusDesc;
+  sm.clock = comp.status?.displayClock || sm.clock;
+  sm.period = comp.status?.period ?? sm.period;
+}
+
+function parseClock(c) {
+  // ESPN clock format: '45:30' or '45'
+  if (!c) return null;
+  const [mm, ss] = c.replace("'",'').split(':').map(s => parseInt(s) || 0);
+  return { mm, ss: ss || 0 };
+}
+
+function formatClock(mm, ss) {
+  return `${mm}'${String(ss).padStart(2,'0')}`;
+}
+
+function updateLiveClock() {
+  const sm = S.selectedMatch;
+  if (!sm || sm.status !== 'in') return;
+  const base = parseClock(sm.clock);
+  if (!base) return;
+  const elapsedMs = Date.now() - S.matchLastFetch;
+  const elapsedSec = Math.floor(elapsedMs / 1000);
+  const totalSec = base.mm * 60 + base.ss + elapsedSec;
+  const mm = Math.floor(totalSec / 60);
+  const ss = totalSec % 60;
+  S.matchInterpClock = formatClock(mm, ss);
+  // Update only the clock element to avoid re-rendering everything
+  const clockEl = document.getElementById('sb2LiveClock');
+  if (clockEl) clockEl.textContent = S.matchInterpClock;
 }
 
 function renderMatchDetail() {
@@ -733,7 +826,8 @@ function renderMatchDetail() {
     else if (m.period === 2) stageText = '2ND HALF';
     else if (m.period >= 3) stageText = 'EXTRA TIME';
     else stageText = 'LIVE';
-    if (m.clock) clockText = m.clock.replace("'",'');
+    // Prefer interpolated local clock (ticks every second between fetches)
+    clockText = S.matchInterpClock || (m.clock ? m.clock.replace("'",'') : '');
   } else if (m.status === 'post') {
     stageText = m.statusDetail || 'FULL TIME';
   } else {
@@ -751,7 +845,7 @@ function renderMatchDetail() {
         </div>
         <div class="sb2-center">
           <div class="sb2-score${m.status==='pre'?' sched':''}">${m.status === 'pre' ? '-' : m.away.score} - ${m.status === 'pre' ? '-' : m.home.score}</div>
-          <div class="sb2-stage ${sCls}">${stageText}${clockText ? ` · ${clockText}` : ''}</div>
+          <div class="sb2-stage ${sCls}">${stageText}${clockText ? ` · <span id="sb2LiveClock">${clockText}</span>` : ''}</div>
         </div>
         <div class="sb2-side">
           <div class="sb2-flag-big">${teamFlag(m.home)}</div>
@@ -1117,6 +1211,7 @@ function renderFullStandings() {
 
 function goBack() {
   if (S.view === 'matchDetail') {
+    stopMatchDetailRefresh();
     S.view = S._prevView || 'list';
     S.selectedMatch = null;
     S.matchDetail = null;
