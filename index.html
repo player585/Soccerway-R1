@@ -6,8 +6,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="3.1.0">
-<title>Soccerway R1 v3.1</title>
+<meta name="version" content="3.1.1">
+<title>Soccerway R1 v3.1.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -77,9 +77,11 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .subtab.active{color:var(--orange);border-bottom-color:var(--orange)}
 
 /* ── Main content ── */
-.main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.main{flex:1;min-height:0;overflow-y:scroll;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  touch-action:pan-y;scroll-behavior:smooth;overscroll-behavior:contain}
 .main::-webkit-scrollbar{width:3px}
 .main::-webkit-scrollbar-thumb{background:var(--bord);border-radius:9px}
+.main::-webkit-scrollbar-track{background:transparent}
 
 /* ── Soccerway-style scoreboard ── */
 .sb2{padding:8px;background:linear-gradient(180deg,var(--surf2) 0%,var(--surf) 100%);border-bottom:1px solid var(--div)}
@@ -289,7 +291,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 </div>
 
 <footer class="footer">
-  <span class="footer-left" id="footerLeft">v3.1</span>
+  <span class="footer-left" id="footerLeft">v3.1.1</span>
   <span class="footer-mid" id="footerMid">Loading…</span>
   <span class="footer-right"><span id="countdown">30s</span></span>
 </footer>
@@ -617,7 +619,7 @@ function groupedMatchList(list, includeCompHeader = true) {
 function render() {
   renderTabs();
   updateFooter();
-  $('footerLeft').textContent = 'v3.1';
+  $('footerLeft').textContent = 'v3.1.1';
 
   if (S.loading && S.matches.length === 0) {
     hideSubTabs();
@@ -1115,27 +1117,35 @@ function currentList() {
   return [];
 }
 
+const SCROLL_STEP = 80; // pixels per wheel tick on detail pages
+
+function scrollPage(dir) {
+  // Smooth pixel-scroll the main panel
+  $('main').scrollBy({ top: dir * SCROLL_STEP, behavior: 'smooth' });
+}
+
 function moveFocus(dir) {
+  // Detail / stat / standings views: pure scroll, no focus
   if (S.view === 'matchDetail') {
-    $('main').scrollBy(0, dir * 40);
-    return;
+    scrollPage(dir); return;
   }
+  if (S.view === 'compDetail' && S.compSubTab === 1) {
+    scrollPage(dir); return;
+  }
+  // Comp grid: navigate cards
   if (S.view === 'compList') {
     const max = LEAGUES.length;
     S.focusIdx = S.focusIdx < 0 ? 0 : Math.max(0, Math.min(S.focusIdx + dir, max - 1));
     render();
-    document.querySelector(`.comp-card[data-i="${S.focusIdx}"]`)?.scrollIntoView({block:'nearest'});
+    document.querySelector(`.comp-card[data-i="${S.focusIdx}"]`)?.scrollIntoView({block:'nearest', behavior:'smooth'});
     return;
   }
-  if (S.view === 'compDetail' && S.compSubTab === 1) {
-    $('main').scrollBy(0, dir * 40);
-    return;
-  }
+  // List view (LIVE / TODAY / comp matches)
   const list = currentList();
-  if (list.length === 0) return;
+  if (list.length === 0) { scrollPage(dir); return; }
   S.focusIdx = S.focusIdx < 0 ? 0 : Math.max(0, Math.min(S.focusIdx + dir, list.length - 1));
   applyFocus();
-  document.querySelector(`.match-row[data-idx="${S.focusIdx}"]`)?.scrollIntoView({block:'nearest'});
+  document.querySelector(`.match-row[data-idx="${S.focusIdx}"]`)?.scrollIntoView({block:'nearest', behavior:'smooth'});
 }
 
 function pttClick() {
