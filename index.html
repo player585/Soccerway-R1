@@ -6,8 +6,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="3.0.0">
-<title>Soccerway R1 v3.0</title>
+<meta name="version" content="3.1.0">
+<title>Soccerway R1 v3.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -80,6 +80,39 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .main::-webkit-scrollbar{width:3px}
 .main::-webkit-scrollbar-thumb{background:var(--bord);border-radius:9px}
+
+/* ── Soccerway-style scoreboard ── */
+.sb2{padding:8px;background:linear-gradient(180deg,var(--surf2) 0%,var(--surf) 100%);border-bottom:1px solid var(--div)}
+.sb2-datetime{font-family:var(--mono);font-size:7px;color:var(--muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.sb2-main{display:flex;align-items:center;gap:4px;justify-content:space-between}
+.sb2-side{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.sb2-flag-big{width:40px;height:28px;border-radius:2px;overflow:hidden;background:var(--offset);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--div)}
+.sb2-flag-big img{width:100%;height:100%;object-fit:cover}
+.sb2-team-name{font-family:var(--body);font-size:var(--xs);font-weight:700;color:var(--txt);text-align:center;line-height:1.1;text-transform:uppercase}
+.sb2-team-rank{font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:.04em}
+.sb2-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:60px;padding:0 4px}
+.sb2-score{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--orange);line-height:1;letter-spacing:.05em}
+.sb2-score.sched{color:var(--muted);font-size:1.1rem}
+.sb2-stage{font-family:var(--mono);font-size:7px;font-weight:700;color:var(--live);text-align:center;line-height:1.2;text-transform:uppercase;letter-spacing:.04em}
+.sb2-stage.ft{color:var(--muted)}
+.sb2-stage.sched{color:var(--txt2)}
+.sb2-clock{font-family:var(--mono);font-size:7px;color:var(--live);font-weight:700}
+
+/* ── Stats section (Soccerway-style) ── */
+.stats2-section{margin-top:4px}
+.stats2-section-header{display:flex;align-items:center;justify-content:center;padding:5px 0;font-family:var(--body);font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--div)}
+.stats2-row{padding:4px 8px;border-bottom:1px solid color-mix(in oklch,var(--div) 30%,transparent)}
+.stats2-row:last-child{border-bottom:none}
+.stats2-row-top{display:flex;justify-content:space-between;align-items:flex-start;font-family:var(--body);font-size:var(--xs);margin-bottom:3px;gap:4px}
+.stats2-val-side{flex:0 0 auto;text-align:left;color:var(--txt);font-weight:600;font-family:var(--mono);font-size:var(--sm);min-width:34px}
+.stats2-val-side.right{text-align:right}
+.stats2-val-side .sub{display:block;font-size:7px;color:var(--muted);font-weight:400}
+.stats2-label{flex:1;text-align:center;color:var(--txt2);font-weight:500;font-size:var(--xs)}
+.stats2-bars{display:flex;height:4px;gap:0;background:#1c2d35;border-radius:1px;overflow:hidden}
+.stats2-bar-left{height:100%;background:var(--orange);margin-left:auto;border-radius:1px}
+.stats2-bar-right{height:100%;background:var(--orange-bright);border-radius:1px}
+.stats2-bar-left.dim{background:#5a5a5a}
+.stats2-bar-right.dim{background:var(--orange)}
 
 /* ── Soccerway-style match list (grouped by competition) ── */
 .comp-group{margin-bottom:2px}
@@ -256,7 +289,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 </div>
 
 <footer class="footer">
-  <span class="footer-left" id="footerLeft">v3.0</span>
+  <span class="footer-left" id="footerLeft">v3.1</span>
   <span class="footer-mid" id="footerMid">Loading…</span>
   <span class="footer-right"><span id="countdown">30s</span></span>
 </footer>
@@ -584,7 +617,7 @@ function groupedMatchList(list, includeCompHeader = true) {
 function render() {
   renderTabs();
   updateFooter();
-  $('footerLeft').textContent = 'v3.0';
+  $('footerLeft').textContent = 'v3.1';
 
   if (S.loading && S.matches.length === 0) {
     hideSubTabs();
@@ -652,25 +685,50 @@ function renderMatchDetail() {
   const sCls = statusClass(m);
   const sTxt = m.statusDetail || statusText(m);
 
-  // Scoreboard always at top
+  // Soccerway-style scoreboard with date, big flags, big score, stage label
+  const matchDate = (() => {
+    if (!m.startISO) return '';
+    try {
+      const d = new Date(m.startISO);
+      const time = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+      const date = d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+      return `${time}, ${date}`;
+    } catch(e) { return ''; }
+  })();
+  // Determine stage text and clock for live matches
+  let stageText = '';
+  let clockText = '';
+  if (m.status === 'in') {
+    if (m.statusDesc === 'Halftime') stageText = 'HALFTIME';
+    else if (m.period === 1) stageText = '1ST HALF';
+    else if (m.period === 2) stageText = '2ND HALF';
+    else if (m.period >= 3) stageText = 'EXTRA TIME';
+    else stageText = 'LIVE';
+    if (m.clock) clockText = m.clock.replace("'",'');
+  } else if (m.status === 'post') {
+    stageText = m.statusDetail || 'FULL TIME';
+  } else {
+    stageText = m.statusDetail || 'KICKOFF SOON';
+  }
+
   let html = `
-    <div class="detail-back" id="backBtn">◀ BACK</div>
-    <div class="scoreboard">
-      <div class="sb-comp">${m.leagueName}</div>
-      <div class="sb-row">
-        <div class="sb-team">
-          <div class="sb-flag">${teamFlag(m.away)}</div>
-          <div class="sb-name">${m.away.name}</div>
+    <div class="detail-back" id="backBtn">◀ ${m.leagueName.toUpperCase()}</div>
+    <div class="sb2">
+      ${matchDate ? `<div class="sb2-datetime">${matchDate}</div>` : ''}
+      <div class="sb2-main">
+        <div class="sb2-side">
+          <div class="sb2-flag-big">${teamFlag(m.away)}</div>
+          <div class="sb2-team-name">${m.away.name}</div>
         </div>
-        <div class="sb-score-block">
-          <div class="sb-score-num">${m.status === 'pre' ? '-' : m.away.score}<span class="sb-vs"> : </span>${m.status === 'pre' ? '-' : m.home.score}</div>
+        <div class="sb2-center">
+          <div class="sb2-score${m.status==='pre'?' sched':''}">${m.status === 'pre' ? '-' : m.away.score} - ${m.status === 'pre' ? '-' : m.home.score}</div>
+          <div class="sb2-stage ${sCls}">${stageText}${clockText ? ` · ${clockText}` : ''}</div>
         </div>
-        <div class="sb-team">
-          <div class="sb-flag">${teamFlag(m.home)}</div>
-          <div class="sb-name">${m.home.name}</div>
+        <div class="sb2-side">
+          <div class="sb2-flag-big">${teamFlag(m.home)}</div>
+          <div class="sb2-team-name">${m.home.name}</div>
         </div>
       </div>
-      <div class="sb-status ${sCls}">${sTxt}</div>
     </div>`;
 
   // Sub-tab content
@@ -719,6 +777,44 @@ function renderEvents(detail, m) {
   </div>`;
 }
 
+/* ── Soccerway-style stats with sections ── */
+const STAT_SECTIONS = [
+  { name: 'TOP STATS', rows: [
+    { label: 'Ball possession',    key: 'possessionPct',  pct: true },
+    { label: 'Total shots',        key: 'totalShots' },
+    { label: 'Shots on target',    key: 'shotsOnTarget' },
+    { label: 'Corner kicks',       key: 'wonCorners' },
+    { label: 'Passes',             key: 'passPct', pct: true, sub: ['accuratePasses','totalPasses'] },
+    { label: 'Yellow cards',       key: 'yellowCards' }
+  ]},
+  { name: 'SHOTS', rows: [
+    { label: 'Total shots',        key: 'totalShots' },
+    { label: 'Shots on target',    key: 'shotsOnTarget' },
+    { label: 'Shot accuracy',      key: 'shotPct', pct: true },
+    { label: 'Blocked shots',      key: 'blockedShots' },
+    { label: 'Saves',              key: 'saves' }
+  ]},
+  { name: 'ATTACK', rows: [
+    { label: 'Corner kicks',       key: 'wonCorners' },
+    { label: 'Offsides',           key: 'offsides' },
+    { label: 'Penalty kicks',      key: 'penaltyKickShots' },
+    { label: 'Penalty goals',      key: 'penaltyKickGoals' }
+  ]},
+  { name: 'PASSES', rows: [
+    { label: 'Passes',             key: 'passPct',     pct: true, sub: ['accuratePasses','totalPasses'] },
+    { label: 'Long balls',         key: 'longballPct', pct: true, sub: ['accurateLongBalls','totalLongBalls'] },
+    { label: 'Crosses',            key: 'crossPct',    pct: true, sub: ['accurateCrosses','totalCrosses'] }
+  ]},
+  { name: 'DEFENSE', rows: [
+    { label: 'Fouls',              key: 'foulsCommitted' },
+    { label: 'Tackles',            key: 'tacklePct',   pct: true, sub: ['effectiveTackles','totalTackles'] },
+    { label: 'Interceptions',      key: 'interceptions' },
+    { label: 'Clearances',         key: 'totalClearance' },
+    { label: 'Yellow cards',       key: 'yellowCards' },
+    { label: 'Red cards',          key: 'redCards' }
+  ]}
+];
+
 function renderStats(detail, m) {
   if (!detail) return loadingFragment('Loading stats…');
   const teams = detail.boxscore?.teams || [];
@@ -727,33 +823,86 @@ function renderStats(detail, m) {
       <div class="empty-sub">Stats appear after kickoff.</div>
     </div>`;
   }
-  const t1Stats = teams[0].statistics || [];
-  const t2Stats = teams[1].statistics || [];
-  // Match home/away
-  const homeFirst = teams[0].homeAway === 'home';
-  const awayStats = homeFirst ? t2Stats : t1Stats;
-  const homeStats = homeFirst ? t1Stats : t2Stats;
+  // Build stat map keyed by `name` for each side
+  function buildStatMap(stats) {
+    const map = {};
+    (stats || []).forEach(s => { map[s.name] = s; });
+    return map;
+  }
+  const homeIdx = teams[0].homeAway === 'home' ? 0 : 1;
+  const awayIdx = 1 - homeIdx;
+  const homeMap = buildStatMap(teams[homeIdx].statistics);
+  const awayMap = buildStatMap(teams[awayIdx].statistics);
 
-  return `<div class="stats-list">
-    ${homeStats.map((stat, i) => {
-      const aVal = parseFloat((awayStats[i]?.displayValue || '0').replace(/[^\d.]/g,'')) || 0;
-      const hVal = parseFloat((stat.displayValue || '0').replace(/[^\d.]/g,'')) || 0;
-      const total = aVal + hVal;
-      const aPct = total > 0 ? (aVal / total) * 100 : 0;
-      const hPct = total > 0 ? (hVal / total) * 100 : 0;
-      return `<div class="stat-row">
-        <div class="stat-row-label">${stat.label || ''}</div>
-        <div class="stat-row-vals">
-          <span>${awayStats[i]?.displayValue || '-'}</span>
-          <span>${stat.displayValue || '-'}</span>
-        </div>
-        <div class="stat-row-bars">
-          <div class="stat-bar-left" style="width:${aPct}%"></div>
-          <div class="stat-bar-right" style="width:${hPct}%"></div>
-        </div>
+  function formatVal(stat, isPct) {
+    if (!stat) return '-';
+    let v = stat.displayValue;
+    if (isPct) {
+      const num = parseFloat(v);
+      if (!isNaN(num)) {
+        // ESPN reports as either 0-1 or 0-100 already
+        const pct = num <= 1 ? Math.round(num * 100) : Math.round(num);
+        return pct + '%';
+      }
+    }
+    return v ?? '-';
+  }
+
+  function rawNum(stat, isPct) {
+    if (!stat) return 0;
+    const n = parseFloat(stat.value ?? stat.displayValue);
+    if (isNaN(n)) return 0;
+    if (isPct) return n <= 1 ? n * 100 : n;
+    return n;
+  }
+
+  function statRow(row) {
+    const aStat = awayMap[row.key];
+    const hStat = homeMap[row.key];
+    if (!aStat && !hStat) return ''; // skip if neither has it
+    const aDisp = formatVal(aStat, row.pct);
+    const hDisp = formatVal(hStat, row.pct);
+    let aSub = '', hSub = '';
+    if (row.sub && row.sub.length === 2) {
+      const aNum = awayMap[row.sub[0]]?.displayValue;
+      const aDen = awayMap[row.sub[1]]?.displayValue;
+      const hNum = homeMap[row.sub[0]]?.displayValue;
+      const hDen = homeMap[row.sub[1]]?.displayValue;
+      if (aNum !== undefined && aDen !== undefined) aSub = `(${aNum}/${aDen})`;
+      if (hNum !== undefined && hDen !== undefined) hSub = `(${hNum}/${hDen})`;
+    }
+    const aRaw = rawNum(aStat, row.pct);
+    const hRaw = rawNum(hStat, row.pct);
+    const total = aRaw + hRaw;
+    let aPct = 0, hPct = 0;
+    if (total > 0) {
+      aPct = (aRaw / total) * 100;
+      hPct = (hRaw / total) * 100;
+    }
+    return `<div class="stats2-row">
+      <div class="stats2-row-top">
+        <div class="stats2-val-side">${aDisp}${aSub ? `<span class="sub">${aSub}</span>` : ''}</div>
+        <div class="stats2-label">${row.label}</div>
+        <div class="stats2-val-side right">${hDisp}${hSub ? `<span class="sub">${hSub}</span>` : ''}</div>
+      </div>
+      <div class="stats2-bars">
+        <div class="stats2-bar-left" style="width:${aPct}%"></div>
+        <div class="stats2-bar-right" style="width:${hPct}%"></div>
+      </div>
+    </div>`;
+  }
+
+  let html = '';
+  STAT_SECTIONS.forEach(section => {
+    const rows = section.rows.map(statRow).filter(Boolean).join('');
+    if (rows) {
+      html += `<div class="stats2-section">
+        <div class="stats2-section-header">${section.name}</div>
+        ${rows}
       </div>`;
-    }).join('')}
-  </div>`;
+    }
+  });
+  return html || `<div class="empty" style="min-height:80px"><div class="empty-sub">Stats appear after kickoff.</div></div>`;
 }
 
 function renderLineups(detail, m) {
