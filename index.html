@@ -6,8 +6,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="3.1.4">
-<title>Soccerway R1 v3.1.4</title>
+<meta name="version" content="3.2.0">
+<title>Soccerway R1 v3.2.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -269,11 +269,22 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 /* ── Hint ── */
 .prompt{padding:3px 8px;text-align:center;font-family:var(--mono);font-size:7px;color:var(--muted);background:var(--surf);border-top:1px solid var(--div);flex-shrink:0;letter-spacing:.04em}
 .prompt span.k{color:var(--orange);font-weight:700}
+
+/* ── Debug HUD ── *
+   Tap twice on the SOCCERWAY logo to toggle. Shows live event activity. */
+.dbg{position:fixed;top:24px;left:0;right:0;max-width:240px;margin:0 auto;
+  background:rgba(0,0,0,0.85);color:#0f0;font-family:var(--mono);font-size:8px;
+  padding:4px 8px;z-index:9999;border-bottom:1px solid #0f0;display:none}
+.dbg.show{display:block}
+.dbg-row{display:flex;justify-content:space-between;line-height:1.4}
+.dbg-evt{color:var(--orange);font-weight:700}
+.dbg-flash{animation:flash .3s ease-out}
+@keyframes flash{0%{background:rgba(255,128,0,0.5)}100%{background:rgba(0,0,0,0.85)}}
 </style>
 </head>
 <body>
 
-<header class="header">
+<header class="header" id="appHeader">
   <div class="header-brand">
     <div class="brand-mark"></div>
     <div class="brand-text">SOCCER<span>WAY</span></div>
@@ -283,6 +294,17 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
     <span class="live-text" id="liveCount">—</span>
   </div>
 </header>
+
+<!-- Debug HUD: double-tap header to toggle. Shows R1 event activity. -->
+<div class="dbg" id="dbg">
+  <div class="dbg-row"><span class="dbg-evt">scrollUp</span>  <span id="dbgUp">0</span></div>
+  <div class="dbg-row"><span class="dbg-evt">scrollDown</span><span id="dbgDown">0</span></div>
+  <div class="dbg-row"><span class="dbg-evt">sideClick</span> <span id="dbgPtt">0</span></div>
+  <div class="dbg-row"><span class="dbg-evt">wheel</span>     <span id="dbgWheel">0</span></div>
+  <div class="dbg-row"><span class="dbg-evt">key</span>       <span id="dbgKey">-</span></div>
+  <div class="dbg-row"><span style="color:#aaa">scrollTop</span><span id="dbgScroll">0</span></div>
+  <div class="dbg-row"><span style="color:#aaa">sec idx</span>  <span id="dbgIdx">0</span></div>
+</div>
 
 <nav class="tabs" id="tabs"></nav>
 <nav class="subtabs" id="subtabs" style="display:none"></nav>
@@ -294,7 +316,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 </div>
 
 <footer class="footer">
-  <span class="footer-left" id="footerLeft">v3.1.4</span>
+  <span class="footer-left" id="footerLeft">v3.2.0</span>
   <span class="footer-mid" id="footerMid">Loading…</span>
   <span class="footer-right"><span id="countdown">30s</span></span>
 </footer>
@@ -623,7 +645,7 @@ function groupedMatchList(list, includeCompHeader = true) {
 function render() {
   renderTabs();
   updateFooter();
-  $('footerLeft').textContent = 'v3.1.4';
+  $('footerLeft').textContent = 'v3.2.0';
 
   if (S.loading && S.matches.length === 0) {
     hideSubTabs();
@@ -1141,16 +1163,28 @@ function getDetailSections() {
 }
 
 function scrollSection(dir) {
-  /* MLB AT BAT v2.0.1 recipe — verbatim:
-     - State-tracked index (Math.max/Math.min clamp)
-     - scrollIntoView({block:'nearest', behavior:'auto'})
-     - 'auto' = instant; 'smooth' is unreliable in R1 WebView
-     - 'nearest' lets the browser pick the closest edge alignment
-     - No offset math, no scrollTo — keep it simple. */
+  /* Triple-strategy scroll — each method as a fallback for the next:
+     1. Direct scrollTop assignment with computed offset (most universal)
+     2. scrollIntoView as backup
+     This way works on R1 WebView regardless of which API is broken. */
   const sections = getDetailSections();
   if (!sections.length) return;
   S.detailScrollIdx = Math.max(0, Math.min(S.detailScrollIdx + dir, sections.length - 1));
-  sections[S.detailScrollIdx].scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  const main = $('main');
+  const target = sections[S.detailScrollIdx];
+
+  // Strategy 1: direct scrollTop = offset relative to main
+  try {
+    const targetTop = target.offsetTop - main.offsetTop;
+    main.scrollTop = Math.max(0, targetTop - 8);
+  } catch(e) {}
+
+  // Strategy 2: belt-and-suspenders scrollIntoView (in case direct failed)
+  try {
+    target.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  } catch(e) {}
+
+  if (window.__dbg) window.__dbg.updateScroll();
 }
 
 function resetDetailScroll() {
@@ -1224,24 +1258,74 @@ function longPress() {
   }
 }
 
-/* R1 hardware events. Some firmware versions fire 'wheel' DOM events with
-   deltaY, others fire custom 'scrollUp'/'scrollDown' events on window.
-   Listen for both to be safe. */
-window.addEventListener('scrollUp',   () => moveFocus(-1));
-window.addEventListener('scrollDown', () => moveFocus(1));
-window.addEventListener('sideClick',  () => pttClick());
-window.addEventListener('longPressStart', () => longPress());
+/* ═════════════════════════════════════
+   Debug HUD
+   Counts every event so user can SEE if R1 fires them.
+   Toggle: double-tap the SOCCERWAY header.
+   ═════════════════════════════════════ */
+window.__dbg = {
+  cnt: { up:0, down:0, ptt:0, wheel:0 },
+  flash() {
+    const el = $('dbg');
+    if (!el) return;
+    el.classList.add('dbg-flash');
+    setTimeout(() => el.classList.remove('dbg-flash'), 250);
+  },
+  updateScroll() {
+    const m = $('main');
+    if ($('dbgScroll') && m) $('dbgScroll').textContent = Math.round(m.scrollTop);
+    if ($('dbgIdx')) $('dbgIdx').textContent = S.detailScrollIdx;
+  },
+  hit(kind) {
+    this.cnt[kind] = (this.cnt[kind]||0) + 1;
+    const id = 'dbg' + (kind === 'up' ? 'Up' : kind === 'down' ? 'Down' : kind === 'ptt' ? 'Ptt' : 'Wheel');
+    if ($(id)) $(id).textContent = this.cnt[kind];
+    this.flash();
+    this.updateScroll();
+  }
+};
 
-// Wheel fallback — throttled so it doesn't overwhelm scrollIntoView
+let _hdrTaps = 0, _hdrTapTimer = null;
+document.getElementById('appHeader').addEventListener('click', () => {
+  _hdrTaps++;
+  clearTimeout(_hdrTapTimer);
+  _hdrTapTimer = setTimeout(() => { _hdrTaps = 0; }, 500);
+  if (_hdrTaps >= 2) {
+    $('dbg').classList.toggle('show');
+    _hdrTaps = 0;
+  }
+});
+
+/* ═════════════════════════════════════
+   R1 hardware events — listen on window AND document for max compat
+   ═════════════════════════════════════ */
+function onScrollUp()   { window.__dbg.hit('up');   moveFocus(-1); }
+function onScrollDown() { window.__dbg.hit('down'); moveFocus(1);  }
+function onSideClick()  { window.__dbg.hit('ptt');  pttClick();    }
+
+['window','document','body'].forEach(target => {
+  const el = target === 'window' ? window : target === 'document' ? document : document.body;
+  if (!el) return;
+  el.addEventListener('scrollUp',   onScrollUp);
+  el.addEventListener('scrollDown', onScrollDown);
+  el.addEventListener('sideClick',  onSideClick);
+  el.addEventListener('longPressStart', () => longPress());
+});
+
+// Wheel fallback — throttled
 let _wheelLock = 0;
-window.addEventListener('wheel', e => {
+function handleWheel(e) {
   const now = Date.now();
   if (now - _wheelLock < 150) return;
   _wheelLock = now;
+  window.__dbg.hit('wheel');
   moveFocus(e.deltaY > 0 ? 1 : -1);
-}, { passive: true });
+}
+window.addEventListener('wheel', handleWheel, { passive: true });
+document.addEventListener('wheel', handleWheel, { passive: true });
 
 document.addEventListener('keydown', e => {
+  if (window.__dbg && $('dbgKey')) $('dbgKey').textContent = e.key;
   if (e.key === 'ArrowUp')        { moveFocus(-1); e.preventDefault(); }
   else if (e.key === 'ArrowDown') { moveFocus(1); e.preventDefault(); }
   else if (e.key === 'Enter' || e.key === ' ') { pttClick(); e.preventDefault(); }
