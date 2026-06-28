@@ -6,30 +6,34 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="3.3.3">
-<title>Soccerway R1 v3.3.3</title>
+<meta name="version" content="3.4.0">
+<title>Soccerway R1 v3.4.0 NEON</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ── Soccerway palette ── */
+/* ── Retro Neon Synthwave palette ── */
 :root {
-  --bg:#001e28;
-  --surf:#0a2a35;
-  --surf2:#103442;
-  --offset:#173e4f;
-  --div:#1c4a5d;
-  --bord:#235a70;
+  --bg:#05010f;
+  --surf:#0d0420;
+  --surf2:#150830;
+  --offset:#1f0e45;
+  --div:#3a1565;
+  --bord:#ff10f0;
   --txt:#ffffff;
-  --txt2:#d4dde2;
-  --muted:#7a96a3;
-  --faint:#4a6470;
-  --orange:#ff8000;
-  --orange-bright:#ff9020;
-  --green:#22c55e;
-  --red:#ef4444;
-  --yellow:#fbbf24;
-  --blue:#5591c7;
-  --live:#ff4500;
+  --txt2:#e8e8ff;
+  --muted:#8a7bbd;
+  --faint:#5a4a85;
+  --orange:#00f0ff;          /* primary neon = cyan */
+  --orange-bright:#7df9ff;
+  --green:#39ff14;           /* neon lime */
+  --red:#ff0055;             /* hot red */
+  --yellow:#fff200;          /* neon yellow */
+  --blue:#b026ff;            /* electric purple */
+  --live:#ff10f0;            /* hot magenta */
+  --glow-cyan:0 0 4px rgba(0,240,255,.9),0 0 10px rgba(0,240,255,.5);
+  --glow-pink:0 0 4px rgba(255,16,240,.9),0 0 10px rgba(255,16,240,.5);
+  --glow-lime:0 0 4px rgba(57,255,20,.9),0 0 10px rgba(57,255,20,.5);
+  --glow-yellow:0 0 4px rgba(255,242,0,.9);
   --mono:'JetBrains Mono',monospace;
   --body:'Inter',sans-serif;
   --xs:0.5625rem;--sm:0.625rem;--base:0.6875rem;--md:0.8125rem;--lg:0.9375rem;
@@ -37,26 +41,38 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{height:100%;-webkit-text-size-adjust:none}
-body{font-family:var(--body);font-size:var(--base);color:var(--txt);background:var(--bg);
-  height:100dvh;overflow:hidden;display:flex;flex-direction:column;max-width:240px;margin:0 auto}
+body{font-family:var(--body);font-size:var(--base);color:var(--txt);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,16,240,.18) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(0,240,255,.15) 0%, transparent 55%),
+    var(--bg);
+  height:100dvh;overflow:hidden;display:flex;flex-direction:column;max-width:240px;margin:0 auto;
+  position:relative}
+/* Scanlines overlay */
+body::after{content:'';position:fixed;inset:0;max-width:240px;margin:0 auto;pointer-events:none;z-index:9998;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0,rgba(255,255,255,.025) 1px,transparent 1px,transparent 3px);
+  mix-blend-mode:overlay}
 button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 
 /* ── Header ── */
 .header{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;
-  background:var(--bg);border-bottom:2px solid var(--orange);flex-shrink:0;min-height:24px}
+  background:linear-gradient(180deg,var(--surf) 0%,var(--bg) 100%);
+  border-bottom:2px solid var(--orange);box-shadow:0 0 8px rgba(0,240,255,.4);
+  flex-shrink:0;min-height:24px;position:relative;z-index:2}
 .header-brand{display:flex;align-items:center;gap:5px}
 .brand-mark{width:14px;height:14px;border-radius:50%;background:var(--orange);position:relative;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center}
+  display:flex;align-items:center;justify-content:center;box-shadow:var(--glow-cyan)}
 .brand-mark::after{content:'';position:absolute;top:3px;left:3px;width:8px;height:8px;border-radius:50%;
   background:radial-gradient(circle at 35% 35%,#fff 28%,transparent 30%),
              linear-gradient(45deg,transparent 45%,#000 45% 55%,transparent 55%);
   background-size:100% 100%}
-.brand-text{font-family:var(--body);font-size:var(--sm);font-weight:700;letter-spacing:.02em;color:var(--txt)}
-.brand-text span{color:var(--orange)}
+.brand-text{font-family:var(--body);font-size:var(--sm);font-weight:700;letter-spacing:.08em;color:var(--txt);
+  text-shadow:0 0 4px rgba(255,255,255,.6)}
+.brand-text span{color:var(--orange);text-shadow:var(--glow-cyan)}
 .header-right{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:7px}
-.live-pulse{width:6px;height:6px;border-radius:50%;background:var(--live);animation:pulse 1.2s ease-in-out infinite;box-shadow:0 0 4px var(--live)}
+.live-pulse{width:6px;height:6px;border-radius:50%;background:var(--live);animation:pulse 1.2s ease-in-out infinite;box-shadow:var(--glow-pink)}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(0.8)}}
-.live-text{color:var(--live);font-weight:700;letter-spacing:.04em}
+.live-text{color:var(--live);font-weight:700;letter-spacing:.04em;text-shadow:var(--glow-pink)}
 
 /* ── Tabs ── */
 .tabs{display:flex;background:var(--surf);border-bottom:1px solid var(--div);flex-shrink:0}
@@ -64,9 +80,9 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
   color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid transparent;
   cursor:pointer;min-height:22px;display:flex;align-items:center;justify-content:center;gap:3px;
   position:relative}
-.tab.active{color:var(--orange);border-bottom-color:var(--orange)}
+.tab.active{color:var(--orange);border-bottom-color:var(--orange);text-shadow:var(--glow-cyan);box-shadow:inset 0 -8px 12px -8px rgba(0,240,255,.4)}
 .tab-badge{font-family:var(--mono);font-size:7px;background:var(--orange);color:var(--bg);
-  padding:1px 4px;border-radius:8px;font-weight:700;line-height:1}
+  padding:1px 4px;border-radius:8px;font-weight:700;line-height:1;box-shadow:var(--glow-cyan)}
 
 /* Sub-tabs (in match/league detail) */
 .subtabs{display:flex;background:var(--surf2);border-bottom:1px solid var(--div);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
@@ -74,7 +90,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .subtab{flex:0 0 auto;padding:4px 8px;font-family:var(--mono);font-size:7px;font-weight:700;
   color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid transparent;
   cursor:pointer;white-space:nowrap}
-.subtab.active{color:var(--orange);border-bottom-color:var(--orange)}
+.subtab.active{color:var(--orange);border-bottom-color:var(--orange);text-shadow:var(--glow-cyan)}
 
 /* ── Main content ── *
    MLB AT BAT recipe: overflow-y:auto + scroll-behavior:smooth + webkit
@@ -96,12 +112,12 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .sb2-team-name{font-family:var(--body);font-size:var(--xs);font-weight:700;color:var(--txt);text-align:center;line-height:1.1;text-transform:uppercase}
 .sb2-team-rank{font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:.04em}
 .sb2-center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:60px;padding:0 4px}
-.sb2-score{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--orange);line-height:1;letter-spacing:.05em}
+.sb2-score{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--orange);line-height:1;letter-spacing:.05em;text-shadow:var(--glow-cyan)}
 .sb2-score.sched{color:var(--muted);font-size:1.1rem}
-.sb2-stage{font-family:var(--mono);font-size:7px;font-weight:700;color:var(--live);text-align:center;line-height:1.2;text-transform:uppercase;letter-spacing:.04em}
+.sb2-stage{font-family:var(--mono);font-size:7px;font-weight:700;color:var(--live);text-align:center;line-height:1.2;text-transform:uppercase;letter-spacing:.04em;text-shadow:var(--glow-pink)}
 .sb2-stage.ft{color:var(--muted)}
 .sb2-stage.sched{color:var(--txt2)}
-.sb2-clock{font-family:var(--mono);font-size:7px;color:var(--live);font-weight:700}
+.sb2-clock{font-family:var(--mono);font-size:7px;color:var(--live);font-weight:700;text-shadow:var(--glow-pink)}
 
 /* ── Stats section (Soccerway-style) ── */
 .stats2-section{margin-top:4px}
@@ -113,27 +129,29 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .stats2-val-side.right{text-align:right}
 .stats2-val-side .sub{display:block;font-size:7px;color:var(--muted);font-weight:400}
 .stats2-label{flex:1;text-align:center;color:var(--txt2);font-weight:500;font-size:var(--xs)}
-.stats2-bars{display:flex;height:4px;gap:0;background:#1c2d35;border-radius:1px;overflow:hidden}
-.stats2-bar-left{height:100%;background:var(--orange);margin-left:auto;border-radius:1px}
-.stats2-bar-right{height:100%;background:var(--orange-bright);border-radius:1px}
-.stats2-bar-left.dim{background:#5a5a5a}
-.stats2-bar-right.dim{background:var(--orange)}
+.stats2-bars{display:flex;height:4px;gap:0;background:#1a0a30;border-radius:1px;overflow:hidden;box-shadow:inset 0 0 2px rgba(0,0,0,.6)}
+.stats2-bar-left{height:100%;background:var(--live);margin-left:auto;border-radius:1px;box-shadow:0 0 4px var(--live)}
+.stats2-bar-right{height:100%;background:var(--orange);border-radius:1px;box-shadow:0 0 4px var(--orange)}
+.stats2-bar-left.dim{background:#5a5a5a;box-shadow:none}
+.stats2-bar-right.dim{background:var(--orange);opacity:.7}
 
 /* ── Soccerway-style match list (grouped by competition) ── */
 .comp-group{margin-bottom:2px}
 .comp-header{display:flex;align-items:center;justify-content:space-between;padding:3px 6px;
-  background:var(--surf2);border-bottom:1px solid var(--div);font-family:var(--body);font-size:var(--xs);
-  font-weight:700;color:var(--orange-bright);text-transform:uppercase;letter-spacing:.04em;min-height:18px}
+  background:linear-gradient(90deg,var(--surf2),var(--offset),var(--surf2));border-bottom:1px solid var(--bord);
+  font-family:var(--body);font-size:var(--xs);
+  font-weight:700;color:var(--orange-bright);text-transform:uppercase;letter-spacing:.06em;min-height:18px;
+  text-shadow:0 0 3px rgba(125,249,255,.6)}
 .comp-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .comp-region{font-size:7px;color:var(--muted);font-weight:500}
 
 .match-row{display:flex;align-items:center;padding:3px 6px;border-bottom:1px solid color-mix(in oklch,var(--div) 50%,transparent);
   cursor:pointer;gap:5px;background:var(--surf);transition:background .12s;min-height:32px}
-.match-row.focused{background:var(--offset);box-shadow:inset 2px 0 0 var(--orange)}
+.match-row.focused{background:var(--offset);box-shadow:inset 2px 0 0 var(--orange),0 0 6px rgba(0,240,255,.4)}
 .match-row:hover{background:var(--surf2)}
 
 .match-time{font-family:var(--mono);font-size:var(--xs);font-weight:700;width:30px;text-align:center;flex-shrink:0;line-height:1.2}
-.match-time.live{color:var(--live);animation:pulse-text 1.5s ease-in-out infinite}
+.match-time.live{color:var(--live);animation:pulse-text 1.5s ease-in-out infinite;text-shadow:var(--glow-pink)}
 .match-time.ft{color:var(--muted)}
 .match-time.sched{color:var(--txt2)}
 .match-time.ht{color:var(--yellow)}
@@ -150,7 +168,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .match-scores{font-family:var(--mono);font-size:var(--sm);font-weight:700;display:flex;flex-direction:column;gap:1px;text-align:right;min-width:12px}
 .score-cell{color:var(--txt2);min-width:12px;height:14px;line-height:14px}
 .score-cell.winner{color:var(--txt)}
-.score-cell.live{color:var(--live)}
+.score-cell.live{color:var(--live);text-shadow:var(--glow-pink)}
 
 .match-status-icon{width:8px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:7px;color:var(--muted)}
 
@@ -161,7 +179,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .empty-title{font-family:var(--body);font-size:var(--sm);color:var(--txt2);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .empty-sub{font-family:var(--mono);font-size:var(--xs);color:var(--muted);max-width:200px;line-height:1.5}
 .spinner-ball{width:24px;height:24px;border-radius:50%;background:var(--orange);
-  border:2px solid var(--orange);animation:spin 1s linear infinite;position:relative;overflow:hidden}
+  border:2px solid var(--orange);animation:spin 1s linear infinite;position:relative;overflow:hidden;box-shadow:var(--glow-cyan)}
 .spinner-ball::before{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;
   border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 35%,transparent 38%),
   linear-gradient(45deg,transparent 45%,#000 45% 55%,transparent 55%)}
@@ -170,13 +188,13 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 /* ── Match Detail — Scoreboard ── */
 .detail-back{display:flex;align-items:center;gap:5px;padding:4px 8px;background:var(--surf);
   border-bottom:1px solid var(--div);font-family:var(--mono);font-size:var(--xs);color:var(--orange);
-  font-weight:700;cursor:pointer;min-height:22px;text-transform:uppercase;letter-spacing:.04em}
+  font-weight:700;cursor:pointer;min-height:22px;text-transform:uppercase;letter-spacing:.04em;text-shadow:var(--glow-cyan)}
 .detail-back:hover{background:var(--surf2)}
 
 .scoreboard{background:linear-gradient(180deg,var(--surf2) 0%,var(--surf) 100%);padding:6px 8px;
   border-bottom:1px solid var(--div)}
 .sb-comp{font-family:var(--mono);font-size:7px;color:var(--orange-bright);text-transform:uppercase;
-  text-align:center;letter-spacing:.06em;font-weight:700;margin-bottom:2px}
+  text-align:center;letter-spacing:.08em;font-weight:700;margin-bottom:2px;text-shadow:var(--glow-cyan)}
 .sb-row{display:flex;align-items:center;justify-content:center;gap:4px;padding:1px 0}
 .sb-team{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
 .sb-flag{width:22px;height:22px;border-radius:50%;background:var(--offset);overflow:hidden;
@@ -185,12 +203,12 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .sb-name{font-family:var(--body);font-size:var(--xs);font-weight:700;color:var(--txt);text-align:center;
   line-height:1.1;max-width:64px}
 .sb-score-block{font-family:var(--mono);font-size:var(--lg);font-weight:700;color:var(--orange);
-  padding:0 4px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:38px}
+  padding:0 4px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:38px;text-shadow:var(--glow-cyan)}
 .sb-score-num{font-size:1.25rem;line-height:1}
 .sb-vs{font-family:var(--mono);font-size:var(--sm);color:var(--muted);font-weight:600}
 .sb-status{text-align:center;font-family:var(--mono);font-size:var(--xs);font-weight:700;margin-top:3px;
   text-transform:uppercase;letter-spacing:.04em}
-.sb-status.live{color:var(--live)}
+.sb-status.live{color:var(--live);text-shadow:var(--glow-pink);animation:pulse-text 1.5s ease-in-out infinite}
 .sb-status.ft{color:var(--muted)}
 .sb-status.sched{color:var(--txt2)}
 
@@ -200,9 +218,9 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
   font-family:var(--body);font-size:var(--xs)}
 .event-min{font-family:var(--mono);font-size:7px;font-weight:700;color:var(--muted);min-width:22px;text-align:right;flex-shrink:0}
 .event-icon{width:12px;height:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border-radius:2px}
-.event-icon.goal{background:var(--green);color:#000}
-.event-icon.yellow{background:var(--yellow);color:#000}
-.event-icon.red{background:var(--red);color:#fff}
+.event-icon.goal{background:var(--green);color:#000;box-shadow:var(--glow-lime)}
+.event-icon.yellow{background:var(--yellow);color:#000;box-shadow:var(--glow-yellow)}
+.event-icon.red{background:var(--red);color:#fff;box-shadow:0 0 4px var(--red)}
 .event-icon.sub{background:var(--blue);color:#fff;font-size:7px}
 .event-icon.var{background:var(--orange);color:#000;font-size:7px}
 .event-text{flex:1;color:var(--txt2);line-height:1.3;min-width:0}
@@ -215,18 +233,18 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .stat-row-vals{display:flex;justify-content:space-between;color:var(--txt);font-weight:700;font-family:var(--mono);font-size:var(--sm);margin-bottom:2px}
 .stat-row-label{text-align:center;color:var(--muted);text-transform:uppercase;font-size:7px;font-weight:600;letter-spacing:.04em;margin-bottom:3px}
 .stat-row-bars{display:flex;gap:2px;height:4px;background:transparent}
-.stat-bar-left,.stat-bar-right{height:100%;background:var(--orange);border-radius:1px;transition:width .3s}
-.stat-bar-left{margin-left:auto}
-.stat-bar-right{background:var(--blue)}
+.stat-bar-left,.stat-bar-right{height:100%;background:var(--orange);border-radius:1px;transition:width .3s;box-shadow:0 0 4px var(--orange)}
+.stat-bar-left{margin-left:auto;background:var(--live);box-shadow:0 0 4px var(--live)}
+.stat-bar-right{background:var(--orange);box-shadow:0 0 4px var(--orange)}
 
 /* ── Lineup ── */
 .lineup-section{padding:4px}
 .lineup-team{margin-bottom:6px}
-.lineup-team-header{display:flex;align-items:center;gap:5px;padding:3px 6px;background:var(--surf2);border-radius:var(--r);margin-bottom:3px;font-family:var(--mono);font-size:7px;font-weight:700;color:var(--orange-bright);text-transform:uppercase;letter-spacing:.04em}
+.lineup-team-header{display:flex;align-items:center;gap:5px;padding:3px 6px;background:var(--surf2);border-radius:var(--r);margin-bottom:3px;font-family:var(--mono);font-size:7px;font-weight:700;color:var(--orange-bright);text-transform:uppercase;letter-spacing:.06em;text-shadow:var(--glow-cyan);border:1px solid var(--div)}
 .lineup-team-header .formation{margin-left:auto;color:var(--muted)}
 .lineup-players{display:flex;flex-direction:column;gap:1px}
 .lineup-player{display:flex;align-items:center;gap:4px;padding:2px 6px;font-family:var(--body);font-size:var(--xs)}
-.lineup-player-num{font-family:var(--mono);font-weight:700;color:var(--orange);width:14px;text-align:right;flex-shrink:0}
+.lineup-player-num{font-family:var(--mono);font-weight:700;color:var(--orange);width:14px;text-align:right;flex-shrink:0;text-shadow:var(--glow-cyan)}
 .lineup-player-name{flex:1;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lineup-player-pos{font-family:var(--mono);font-size:7px;color:var(--muted);text-transform:uppercase;flex-shrink:0}
 .lineup-divider{display:flex;align-items:center;gap:4px;padding:3px 6px;font-family:var(--mono);font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -244,7 +262,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .standings-row{display:grid;grid-template-columns:14px 1fr 18px 18px 22px;gap:3px;align-items:center;padding:2px 4px;
   border-bottom:1px solid color-mix(in oklch,var(--div) 40%,transparent)}
 .standings-row.header{font-weight:700;color:var(--muted);text-transform:uppercase;font-size:7px;background:var(--surf2);border-radius:var(--r);padding:3px 4px}
-.standings-row .rank{color:var(--orange);font-weight:700;text-align:center}
+.standings-row .rank{color:var(--orange);font-weight:700;text-align:center;text-shadow:var(--glow-cyan)}
 .standings-row .team{color:var(--txt2);font-weight:500;font-family:var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .standings-row .gp,.standings-row .gd{color:var(--muted);text-align:right}
 .standings-row .pts{color:var(--txt);font-weight:700;text-align:right}
@@ -254,21 +272,23 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .comp-card{background:var(--surf);border:1px solid var(--div);border-radius:var(--r);padding:6px 4px;
   text-align:center;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;gap:2px;
   min-height:46px;align-items:center;justify-content:center}
-.comp-card.focused{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange);background:var(--surf2)}
+.comp-card.focused{border-color:var(--orange);box-shadow:0 0 0 1px var(--orange),0 0 10px rgba(0,240,255,.5);background:var(--surf2)}
 .comp-card-name{font-family:var(--body);font-size:var(--xs);font-weight:700;color:var(--txt);line-height:1.2}
 .comp-card-region{font-family:var(--mono);font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.comp-card-live{position:absolute;top:2px;right:2px;background:var(--live);color:#fff;font-family:var(--mono);font-size:6px;font-weight:700;padding:1px 3px;border-radius:6px}
+.comp-card-live{position:absolute;top:2px;right:2px;background:var(--live);color:#fff;font-family:var(--mono);font-size:6px;font-weight:700;padding:1px 3px;border-radius:6px;box-shadow:var(--glow-pink)}
 
 /* ── Footer ── */
 .footer{display:flex;align-items:center;justify-content:space-between;padding:2px 8px;
-  background:var(--bg);border-top:1px solid var(--orange);flex-shrink:0;min-height:16px;font-family:var(--mono);font-size:7px}
+  background:linear-gradient(0deg,var(--surf) 0%,var(--bg) 100%);
+  border-top:1px solid var(--orange);box-shadow:0 0 6px rgba(0,240,255,.4);
+  flex-shrink:0;min-height:16px;font-family:var(--mono);font-size:7px;position:relative;z-index:2}
 .footer-left{color:var(--muted)}
 .footer-mid{flex:1;text-align:center;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
-.footer-right{color:var(--orange);display:flex;align-items:center;gap:3px;font-weight:700}
+.footer-right{color:var(--orange);display:flex;align-items:center;gap:3px;font-weight:700;text-shadow:var(--glow-cyan)}
 
 /* ── Hint ── */
-.prompt{padding:3px 8px;text-align:center;font-family:var(--mono);font-size:7px;color:var(--muted);background:var(--surf);border-top:1px solid var(--div);flex-shrink:0;letter-spacing:.04em}
-.prompt span.k{color:var(--orange);font-weight:700}
+.prompt{padding:3px 8px;text-align:center;font-family:var(--mono);font-size:7px;color:var(--muted);background:var(--surf);border-top:1px solid var(--div);flex-shrink:0;letter-spacing:.06em;position:relative;z-index:2}
+.prompt span.k{color:var(--orange);font-weight:700;text-shadow:var(--glow-cyan)}
 
 /* ── Debug HUD ── *
    Tap twice on the SOCCERWAY logo to toggle. Shows live event activity. */
@@ -316,7 +336,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 </div>
 
 <footer class="footer">
-  <span class="footer-left" id="footerLeft">v3.3.3</span>
+  <span class="footer-left" id="footerLeft">v3.4.0</span>
   <span class="footer-mid" id="footerMid">Loading…</span>
   <span class="footer-right"><span id="countdown">30s</span></span>
 </footer>
@@ -653,7 +673,7 @@ function groupedMatchList(list, includeCompHeader = true) {
 function render() {
   renderTabs();
   updateFooter();
-  $('footerLeft').textContent = 'v3.3.3';
+  $('footerLeft').textContent = 'v3.4.0';
 
   if (S.loading && S.matches.length === 0) {
     hideSubTabs();
