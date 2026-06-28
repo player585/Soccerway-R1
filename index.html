@@ -6,8 +6,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="3.5.0">
-<title>Soccerway R1 v3.5.0 GOAL FX</title>
+<meta name="version" content="3.5.1">
+<title>Soccerway R1 v3.5.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -363,7 +363,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 </div>
 
 <footer class="footer">
-  <span class="footer-left" id="footerLeft">v3.5.0</span>
+  <span class="footer-left" id="footerLeft">v3.5.1</span>
   <span class="footer-mid" id="footerMid">Loading…</span>
   <span class="footer-right"><span id="countdown">30s</span></span>
 </footer>
@@ -505,21 +505,8 @@ function parseTeam(t) {
    GOAL CELEBRATION — detect score changes, fire visual + audio
    ═══════════════════════════════════════ */
 
-function detectGoals(newMatches) {
-  // First sync: record scores without firing
-  const isFirstSync = Object.keys(S.prevScores).length === 0;
-  newMatches.forEach(m => {
-    if (m.status !== 'in') return;          // only live games
-    const h = parseInt(m.home.score, 10) || 0;
-    const a = parseInt(m.away.score, 10) || 0;
-    const prev = S.prevScores[m.id];
-    if (!isFirstSync && prev) {
-      if (h > prev.h)      triggerGoalCelebration(m.home.name, h, a, m);
-      else if (a > prev.a) triggerGoalCelebration(m.away.name, h, a, m);
-    }
-    S.prevScores[m.id] = { h, a };
-  });
-}
+// (Removed list-level detectGoals — celebration is now only for the
+// currently-opened match. See updateSelectedMatchFromDetail.)
 
 function triggerGoalCelebration(scorer, h, a, match) {
   if (S.goalFxBusy) return;
@@ -626,8 +613,9 @@ async function fetchAllMatches() {
 
   const results = await Promise.all(LEAGUES.map(l => fetchLeague(l.slug)));
   const newMatches = results.flat();
-  // Detect goals — compare new scores to S.prevScores
-  detectGoals(newMatches);
+  // Goal celebration is intentionally NOT fired here — only the currently-open
+  // match (the one on the detail screen) gets the cheer/overlay. See
+  // updateSelectedMatchFromDetail() which polls every 15s while open.
   S.matches = newMatches;
   S.matches.sort((a, b) => {
     const order = {in:0, pre:1, post:2};
@@ -824,7 +812,7 @@ function groupedMatchList(list, includeCompHeader = true) {
 function render() {
   renderTabs();
   updateFooter();
-  $('footerLeft').textContent = 'v3.5.0';
+  $('footerLeft').textContent = 'v3.5.1';
 
   if (S.loading && S.matches.length === 0) {
     hideSubTabs();
