@@ -6,8 +6,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="3.4.0">
-<title>Soccerway R1 v3.4.0 NEON</title>
+<meta name="version" content="3.5.0">
+<title>Soccerway R1 v3.5.0 GOAL FX</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -290,6 +290,30 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 .prompt{padding:3px 8px;text-align:center;font-family:var(--mono);font-size:7px;color:var(--muted);background:var(--surf);border-top:1px solid var(--div);flex-shrink:0;letter-spacing:.06em;position:relative;z-index:2}
 .prompt span.k{color:var(--orange);font-weight:700;text-shadow:var(--glow-cyan)}
 
+/* ── Goal celebration overlay ── */
+.goal-fx{position:fixed;inset:0;max-width:240px;margin:0 auto;z-index:10000;
+  display:none;align-items:center;justify-content:center;flex-direction:column;
+  background:radial-gradient(ellipse at 50% 50%,rgba(57,255,20,.35) 0%,rgba(255,16,240,.22) 40%,rgba(5,1,15,.95) 75%);
+  overflow:hidden;pointer-events:none;animation:goalbg .2s ease-out}
+.goal-fx.show{display:flex}
+@keyframes goalbg{from{opacity:0}to{opacity:1}}
+.goal-text{font-family:var(--mono);font-size:42px;font-weight:700;color:#fff;letter-spacing:.04em;
+  text-shadow:0 0 8px #39ff14,0 0 18px #39ff14,0 0 30px #00f0ff;
+  animation:goalpop .5s cubic-bezier(.2,1.6,.4,1) both,goalshake .12s ease-in-out 6 .5s}
+@keyframes goalpop{from{transform:scale(.2) rotate(-12deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+@keyframes goalshake{0%,100%{transform:translateX(0)}50%{transform:translateX(2px) rotate(.5deg)}}
+.goal-scorer{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--orange);margin-top:6px;
+  text-shadow:var(--glow-cyan);letter-spacing:.06em;animation:fadein .6s .2s both}
+.goal-score{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--live);margin-top:8px;
+  text-shadow:var(--glow-pink);letter-spacing:.08em;animation:fadein .6s .4s both}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.confetti{position:absolute;top:-12px;border-radius:1px;
+  animation:confetti linear forwards}
+@keyframes confetti{
+  0%{transform:translateY(-20px) rotate(0);opacity:1}
+  100%{transform:translateY(320px) rotate(720deg);opacity:.2}
+}
+
 /* ── Debug HUD ── *
    Tap twice on the SOCCERWAY logo to toggle. Shows live event activity. */
 .dbg{position:fixed;top:24px;left:0;right:0;max-width:240px;margin:0 auto;
@@ -315,6 +339,9 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
   </div>
 </header>
 
+<!-- Goal celebration overlay -->
+<div class="goal-fx" id="goalFx"></div>
+
 <!-- Debug HUD: double-tap header to toggle. Shows R1 event activity. -->
 <div class="dbg" id="dbg">
   <div class="dbg-row"><span class="dbg-evt">scrollUp</span>  <span id="dbgUp">0</span></div>
@@ -336,7 +363,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 </div>
 
 <footer class="footer">
-  <span class="footer-left" id="footerLeft">v3.4.0</span>
+  <span class="footer-left" id="footerLeft">v3.5.0</span>
   <span class="footer-mid" id="footerMid">Loading…</span>
   <span class="footer-right"><span id="countdown">30s</span></span>
 </footer>
@@ -411,7 +438,11 @@ let S = {
   matchDetailTimer: null,   // setInterval id for stats/events/score refresh (30s)
   matchClockTimer: null,    // setInterval id for clock ticker (1s)
   matchLastFetch: 0,        // timestamp when we last fetched detail
-  matchInterpClock: ''      // locally-interpolated clock string for live
+  matchInterpClock: '',     // locally-interpolated clock string for live
+  // Goal-celebration tracking
+  prevScores: {},           // map of matchId -> {h:int, a:int}
+  audioCtx: null,           // WebAudio context (lazy init)
+  goalFxBusy: false         // suppress overlapping celebrations
 };
 
 const $ = id => document.getElementById(id);
@@ -470,6 +501,123 @@ function parseTeam(t) {
   };
 }
 
+/* ════════════════════════════════════════
+   GOAL CELEBRATION — detect score changes, fire visual + audio
+   ═══════════════════════════════════════ */
+
+function detectGoals(newMatches) {
+  // First sync: record scores without firing
+  const isFirstSync = Object.keys(S.prevScores).length === 0;
+  newMatches.forEach(m => {
+    if (m.status !== 'in') return;          // only live games
+    const h = parseInt(m.home.score, 10) || 0;
+    const a = parseInt(m.away.score, 10) || 0;
+    const prev = S.prevScores[m.id];
+    if (!isFirstSync && prev) {
+      if (h > prev.h)      triggerGoalCelebration(m.home.name, h, a, m);
+      else if (a > prev.a) triggerGoalCelebration(m.away.name, h, a, m);
+    }
+    S.prevScores[m.id] = { h, a };
+  });
+}
+
+function triggerGoalCelebration(scorer, h, a, match) {
+  if (S.goalFxBusy) return;
+  S.goalFxBusy = true;
+  playGoalSound();
+  showGoalOverlay(scorer, h, a, match);
+  setTimeout(() => { S.goalFxBusy = false; }, 4500);
+}
+
+/* ── Audio: synthesize crowd cheer + referee whistle + horn via WebAudio. ──
+   No external files needed. Works offline. */
+function playGoalSound() {
+  try {
+    if (!S.audioCtx) S.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = S.audioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    const t0 = ctx.currentTime;
+
+    // 1) Crowd cheer — filtered noise burst with swelling envelope
+    const noiseDur = 3.0;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * noiseDur, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) {
+      // Brownian-ish noise for warmer crowd texture
+      d[i] = (Math.random() * 2 - 1) * 0.6 + (i > 0 ? d[i-1] * 0.5 : 0);
+      d[i] *= 0.6;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 0.7;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.0001, t0);
+    noiseGain.gain.exponentialRampToValueAtTime(0.55, t0 + 0.25);
+    noiseGain.gain.exponentialRampToValueAtTime(0.4,  t0 + 1.5);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 3.0);
+    noise.connect(bp).connect(noiseGain).connect(ctx.destination);
+    noise.start(t0); noise.stop(t0 + noiseDur);
+
+    // 2) Referee whistle — short FM sine blast
+    function whistle(start) {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 2400;
+      const v = ctx.createGain(); v.gain.setValueAtTime(0.0001, start);
+      v.gain.exponentialRampToValueAtTime(0.35, start + 0.02);
+      v.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
+      // vibrato
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 25;
+      const lfoGain = ctx.createGain(); lfoGain.gain.value = 80;
+      lfo.connect(lfoGain).connect(o.frequency);
+      o.connect(v).connect(ctx.destination);
+      o.start(start); lfo.start(start);
+      o.stop(start + 0.3); lfo.stop(start + 0.3);
+    }
+    whistle(t0 + 0.05);
+    whistle(t0 + 0.45);
+
+    // 3) Stadium horn — three rising sawtooth notes (think "DA-DA-DAAA")
+    function horn(start, freq, dur) {
+      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = freq;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1200;
+      const v = ctx.createGain();
+      v.gain.setValueAtTime(0.0001, start);
+      v.gain.exponentialRampToValueAtTime(0.28, start + 0.04);
+      v.gain.setValueAtTime(0.28, start + dur - 0.08);
+      v.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      o.connect(lp).connect(v).connect(ctx.destination);
+      o.start(start); o.stop(start + dur);
+    }
+    horn(t0 + 1.0, 220, 0.22);
+    horn(t0 + 1.28, 220, 0.22);
+    horn(t0 + 1.60, 330, 0.70);
+  } catch(e) { /* audio not available — silent fail */ }
+}
+
+function showGoalOverlay(scorer, h, a, match) {
+  const fx = $('goalFx');
+  if (!fx) return;
+  // Build confetti dots
+  const colors = ['#00f0ff','#ff10f0','#39ff14','#fff200','#ffffff','#b026ff'];
+  let confetti = '';
+  for (let i = 0; i < 28; i++) {
+    const c = colors[i % colors.length];
+    const left = Math.random() * 100;
+    const delay = (Math.random() * 0.6).toFixed(2);
+    const dur = (1.4 + Math.random() * 1.4).toFixed(2);
+    const size = (3 + Math.random() * 5).toFixed(1);
+    confetti += `<span class="confetti" style="left:${left}%;width:${size}px;height:${size}px;background:${c};box-shadow:0 0 6px ${c};animation-delay:${delay}s;animation-duration:${dur}s"></span>`;
+  }
+  fx.innerHTML = `
+    ${confetti}
+    <div class="goal-text">GOOOAL</div>
+    <div class="goal-scorer">${scorer.toUpperCase()}</div>
+    <div class="goal-score">${h} — ${a}</div>
+  `;
+  fx.classList.add('show');
+  setTimeout(() => fx.classList.remove('show'), 4000);
+}
+
 async function fetchAllMatches() {
   S.loading = true;
   S.refreshing = true;
@@ -477,7 +625,10 @@ async function fetchAllMatches() {
   if (S.matches.length === 0) render();
 
   const results = await Promise.all(LEAGUES.map(l => fetchLeague(l.slug)));
-  S.matches = results.flat();
+  const newMatches = results.flat();
+  // Detect goals — compare new scores to S.prevScores
+  detectGoals(newMatches);
+  S.matches = newMatches;
   S.matches.sort((a, b) => {
     const order = {in:0, pre:1, post:2};
     const d = (order[a.status] ?? 3) - (order[b.status] ?? 3);
@@ -673,7 +824,7 @@ function groupedMatchList(list, includeCompHeader = true) {
 function render() {
   renderTabs();
   updateFooter();
-  $('footerLeft').textContent = 'v3.4.0';
+  $('footerLeft').textContent = 'v3.5.0';
 
   if (S.loading && S.matches.length === 0) {
     hideSubTabs();
@@ -787,6 +938,17 @@ function updateSelectedMatchFromDetail(detail) {
   if (competitors.length >= 2) {
     const home = competitors.find(t => t.homeAway === 'home') || competitors[0];
     const away = competitors.find(t => t.homeAway === 'away') || competitors[1];
+    // Detect goal scored while viewing detail page
+    const prevH = parseInt(sm.home.score, 10) || 0;
+    const prevA = parseInt(sm.away.score, 10) || 0;
+    const newH  = parseInt(home.score, 10) || 0;
+    const newA  = parseInt(away.score, 10) || 0;
+    if (sm.status === 'in') {
+      if (newH > prevH) triggerGoalCelebration(sm.home.name, newH, newA, sm);
+      else if (newA > prevA) triggerGoalCelebration(sm.away.name, newH, newA, sm);
+      // also keep the global prevScores map in sync so list-refresh won't double-fire
+      S.prevScores[sm.id] = { h: newH, a: newA };
+    }
     sm.home.score = home.score || sm.home.score;
     sm.away.score = away.score || sm.away.score;
   }
@@ -1470,6 +1632,29 @@ document.getElementById('appHeader').addEventListener('click', () => {
     $('dbg').classList.toggle('show');
     _hdrTaps = 0;
   }
+});
+
+/* Audio unlock — WebAudio needs a user gesture before it can play.
+   Initialize the context on the first touch/click/key so the first
+   real goal can play without delay. */
+function unlockAudio() {
+  try {
+    if (!S.audioCtx) S.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (S.audioCtx.state === 'suspended') S.audioCtx.resume();
+  } catch(e) {}
+}
+['click','touchstart','keydown'].forEach(ev =>
+  document.addEventListener(ev, unlockAudio, { once: false, passive: true })
+);
+
+/* Manual goal-effect test — double-tap the LIVE counter (right side of header)
+   to demo. stopPropagation so it doesn't also toggle the debug HUD. */
+document.querySelector('.header-right').addEventListener('click', (e) => {
+  e.stopPropagation();
+  unlockAudio();
+  if (S._liveTapTimer) { clearTimeout(S._liveTapTimer); S._liveTapTimer=null;
+    triggerGoalCelebration('TEST GOAL', 1, 0, null); return; }
+  S._liveTapTimer = setTimeout(()=>{ S._liveTapTimer=null; }, 400);
 });
 
 /* ═════════════════════════════════════
