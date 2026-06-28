@@ -6,8 +6,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="3.3.2">
-<title>Soccerway R1 v3.3.2</title>
+<meta name="version" content="3.3.3">
+<title>Soccerway R1 v3.3.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -316,7 +316,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 </div>
 
 <footer class="footer">
-  <span class="footer-left" id="footerLeft">v3.3.2</span>
+  <span class="footer-left" id="footerLeft">v3.3.3</span>
   <span class="footer-mid" id="footerMid">Loading…</span>
   <span class="footer-right"><span id="countdown">30s</span></span>
 </footer>
@@ -653,7 +653,7 @@ function groupedMatchList(list, includeCompHeader = true) {
 function render() {
   renderTabs();
   updateFooter();
-  $('footerLeft').textContent = 'v3.3.2';
+  $('footerLeft').textContent = 'v3.3.3';
 
   if (S.loading && S.matches.length === 0) {
     hideSubTabs();
@@ -962,6 +962,32 @@ function renderStats(detail, m) {
   const awayIdx = 1 - homeIdx;
   const homeMap = buildStatMap(teams[homeIdx].statistics);
   const awayMap = buildStatMap(teams[awayIdx].statistics);
+
+  // ── Corner-kick override ──
+  // ESPN's `wonCorners` is unreliable (often returns 1-1 or fluctuates).
+  // Count corners directly from commentary text — authoritative play-by-play.
+  // Format examples: "Corner, Colombia. Conceded by ..." / "Corner, Portugal."
+  try {
+    const homeName = (teams[homeIdx].team.displayName || '').toLowerCase();
+    const awayName = (teams[awayIdx].team.displayName || '').toLowerCase();
+    const homeShort = (teams[homeIdx].team.shortDisplayName || '').toLowerCase();
+    const awayShort = (teams[awayIdx].team.shortDisplayName || '').toLowerCase();
+    const commentary = detail.commentary || [];
+    let hCorners = 0, aCorners = 0;
+    commentary.forEach(c => {
+      const txt = (c.text || '').toLowerCase();
+      // Match "corner, <team>" or "corner kick, <team>" — must start with corner award phrase
+      const m = txt.match(/corner(?:\s*kick)?,\s*([a-zà-ÿ' .\-]+?)[.!]/i);
+      if (!m) return;
+      const who = m[1].trim();
+      if (who === homeName || who === homeShort || homeName.includes(who) || who.includes(homeName)) hCorners++;
+      else if (who === awayName || who === awayShort || awayName.includes(who) || who.includes(awayName)) aCorners++;
+    });
+    if (commentary.length > 0) {
+      homeMap.wonCorners = { name: 'wonCorners', displayValue: String(hCorners), value: hCorners };
+      awayMap.wonCorners = { name: 'wonCorners', displayValue: String(aCorners), value: aCorners };
+    }
+  } catch(e) { /* fall back to ESPN value */ }
 
   function formatVal(stat, isPct) {
     if (!stat) return '-';
