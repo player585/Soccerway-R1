@@ -6,8 +6,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="3.3.0">
-<title>Soccerway R1 v3.3.0</title>
+<meta name="version" content="3.3.1">
+<title>Soccerway R1 v3.3.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -316,7 +316,7 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 </div>
 
 <footer class="footer">
-  <span class="footer-left" id="footerLeft">v3.3.0</span>
+  <span class="footer-left" id="footerLeft">v3.3.1</span>
   <span class="footer-mid" id="footerMid">Loading…</span>
   <span class="footer-right"><span id="countdown">30s</span></span>
 </footer>
@@ -650,7 +650,7 @@ function groupedMatchList(list, includeCompHeader = true) {
 function render() {
   renderTabs();
   updateFooter();
-  $('footerLeft').textContent = 'v3.3.0';
+  $('footerLeft').textContent = 'v3.3.1';
 
   if (S.loading && S.matches.length === 0) {
     hideSubTabs();
@@ -913,7 +913,7 @@ const STAT_SECTIONS = [
   { name: 'SHOTS', rows: [
     { label: 'Total shots',        key: 'totalShots' },
     { label: 'Shots on target',    key: 'shotsOnTarget' },
-    { label: 'Shot accuracy',      key: 'shotPct', pct: true },
+    { label: 'Shot accuracy',      key: 'shotPct', pct: true, sub: ['shotsOnTarget','totalShots'] },
     { label: 'Blocked shots',      key: 'blockedShots' },
     { label: 'Saves',              key: 'saves' }
   ]},
@@ -982,25 +982,54 @@ function renderStats(detail, m) {
   function statRow(row) {
     const aStat = awayMap[row.key];
     const hStat = homeMap[row.key];
-    if (!aStat && !hStat) return ''; // skip if neither has it
-    const aDisp = formatVal(aStat, row.pct);
-    const hDisp = formatVal(hStat, row.pct);
+    if (!aStat && !hStat) return '';
+
+    let aDisp = '-', hDisp = '-';
     let aSub = '', hSub = '';
-    if (row.sub && row.sub.length === 2) {
-      const aNum = awayMap[row.sub[0]]?.displayValue;
-      const aDen = awayMap[row.sub[1]]?.displayValue;
-      const hNum = homeMap[row.sub[0]]?.displayValue;
-      const hDen = homeMap[row.sub[1]]?.displayValue;
-      if (aNum !== undefined && aDen !== undefined) aSub = `(${aNum}/${aDen})`;
-      if (hNum !== undefined && hDen !== undefined) hSub = `(${hNum}/${hDen})`;
+    let aRaw = 0, hRaw = 0;
+
+    if (row.pct && row.sub && row.sub.length === 2) {
+      // PERCENTAGE WITH SUB-COUNTS — compute locally from accurate/total.
+      // ESPN's pre-computed pct is rounded to 1 decimal and often inaccurate.
+      // Example: ESPN says passPct=0.9 when actual is 139/147 = 94.5%.
+      const num = (s) => parseFloat(s?.displayValue);
+      const aNum = num(awayMap[row.sub[0]]);
+      const aDen = num(awayMap[row.sub[1]]);
+      const hNum = num(homeMap[row.sub[0]]);
+      const hDen = num(homeMap[row.sub[1]]);
+
+      if (Number.isFinite(aDen) && aDen > 0 && Number.isFinite(aNum)) {
+        aRaw = (aNum / aDen) * 100;
+        aDisp = `${Math.round(aRaw)}%`;
+        aSub = `(${aNum}/${aDen})`;
+      } else if (aStat) {
+        aDisp = formatVal(aStat, true);
+        aRaw = rawNum(aStat, true);
+      }
+      if (Number.isFinite(hDen) && hDen > 0 && Number.isFinite(hNum)) {
+        hRaw = (hNum / hDen) * 100;
+        hDisp = `${Math.round(hRaw)}%`;
+        hSub = `(${hNum}/${hDen})`;
+      } else if (hStat) {
+        hDisp = formatVal(hStat, true);
+        hRaw = rawNum(hStat, true);
+      }
+    } else {
+      // Plain integer or single-value percentage (e.g., possession)
+      aDisp = formatVal(aStat, row.pct);
+      hDisp = formatVal(hStat, row.pct);
+      aRaw = rawNum(aStat, row.pct);
+      hRaw = rawNum(hStat, row.pct);
     }
-    const aRaw = rawNum(aStat, row.pct);
-    const hRaw = rawNum(hStat, row.pct);
+
     const total = aRaw + hRaw;
     let aPct = 0, hPct = 0;
     if (total > 0) {
       aPct = (aRaw / total) * 100;
       hPct = (hRaw / total) * 100;
+    } else if (row.pct) {
+      // Both 0% — leave bars empty
+      aPct = hPct = 0;
     }
     return `<div class="stats2-row">
       <div class="stats2-row-top">
